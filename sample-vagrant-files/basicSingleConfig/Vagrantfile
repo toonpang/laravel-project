@@ -1,0 +1,50 @@
+# Basic configuration for vagrant box with masterless salt provisioner.
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "bento/centos-7.4"
+  config.vm.hostname = "local"
+  config.vm.network "private_network", ip: "192.168.33.10"
+
+  # Provider
+  config.vm.provider "virtualbox" do |vb|
+
+    vb.gui = false
+    vb.memory = "2048"
+
+  end
+
+  # Sync folders
+  config.vm.synced_folder "saltstack/salt", "/srv/salt/"
+  config.vm.synced_folder "saltstack/pillar", "/srv/pillar/"
+
+
+  # Provisioning
+  config.vm.provision :salt do |salt|
+
+      # Relative location of configuration file to use for minion
+      # since we need to tell our minion to run in masterless mode
+      salt.masterless = true
+      salt.minion_config = "saltstack/etc/minion"
+
+      # Stable version of salt is preferred
+      salt.install_type = "stable"
+      # -F : Allow copied files to overwrite existing(config, init.d, etc)
+      # -c : Temporary configuration directory
+      # -P : Allow pip based installations. On some distributions the required salt
+      #      packages or its dependencies are not available as a package for that
+      #      distribution. Using this flag allows the script to use pip as a last
+      #      resort method. NOTE: This only works for functions which actually
+      #      implement pip based installations.
+      salt.bootstrap_options = "-F -c /tmp/ -P"
+
+      # On provision, run state.highstate (which installs packages, services, etc).
+      # Highstate basicly means "comapre the VMs current machine state against
+      # what it should be and make changes if necessary".
+      salt.run_highstate = true
+
+      # Run in verbose mode, so it will output all debug info to the console.
+      salt.verbose = true
+
+    end
+end
